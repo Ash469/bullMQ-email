@@ -75,7 +75,7 @@ node worker.js
 
 ### Installation
 ```bash
-npm install <your-github-username>/<repo-name>
+npm install https://github.com/Ash469/bullMQ-email
 # or 
 # npm install bulk-email-bullmq-runner
 ```
