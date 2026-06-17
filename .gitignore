@@ -121,5 +121,4 @@ dist
 # Mac OS files
 .DS_Store
 
-# Data files (specific to your project to avoid leaking sensitive info)
 emails.csv

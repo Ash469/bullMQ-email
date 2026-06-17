@@ -36,7 +36,11 @@ async function loadEmailsAndEnqueue(csvFilePath, redisOptions) {
           await emailQueue.add('sendEmail', {
             to: emails[i]
           }, {
-            removeOnComplete: true,
+            // Keep up to 5000 completed jobs for 24 hours so you can see them in the Dashboard
+            removeOnComplete: {
+              age: 24 * 3600, 
+              count: 5000
+            },
             attempts: 3,
             backoff: {
               type: 'exponential',

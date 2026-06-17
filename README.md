@@ -71,20 +71,28 @@ node worker.js
 ```
 
 
-## 📦 Using as a Package (NPM Module)
+## 📦 Using as a Package (GitHub Packages)
+
+This package is published to GitHub Packages under the `@ash469` scope.
+
+### Authentication
+
+To install this package, you must authenticate with GitHub Packages. Add an `.npmrc` file in your project root with the following:
+
+```
+@ash469:registry=https://npm.pkg.github.com
+```
 
 ### Installation
 ```bash
-npm install https://github.com/Ash469/bullMQ-email
-# or 
-# npm install bulk-email-bullmq-runner
+npm install @ash469/bulk-email-bullmq-runner
 ```
 
 ### Usage Example
 You can import the core functions into any of your existing Node applications:
 
 ```javascript
-const { loadEmailsAndEnqueue, startWorker, startDashboard } = require('bulk-email-bullmq-runner');
+const { loadEmailsAndEnqueue, startWorker, startDashboard } = require('@ash469/bulk-email-bullmq-runner');
 
 // 1. Start the Dashboard UI on a custom port
 startDashboard(
