@@ -3,7 +3,7 @@ const { Worker } = require('bullmq');
 const nodemailer = require('nodemailer');
 const IORedis = require('ioredis');
 
-function startWorker(redisOptions, smtpConfigs) {
+function startWorker(redisOptions, smtpConfigs, mailTemplate = {}) {
   // Redis connection
   const connection = new IORedis(redisOptions || {
     host: process.env.REDIS_HOST || '127.0.0.1',
@@ -46,11 +46,11 @@ const worker = new Worker('emailQueue', async job => {
   const senderEmail = transporter.transporter.options.auth.user;
   
   const mailOptions = {
-    from: `"Event Registration" <${senderEmail}>`,
+    from: `"${mailTemplate.fromName || 'System'}" <${senderEmail}>`,
     to: to,
-    subject: 'Event Registration Details',
-    text: 'Hello! Thank you for your interest. Here are the details for the event registration...',
-    // html: '<h1>Event Registration Details</h1><p>Hello! ...</p>'
+    subject: mailTemplate.subject || 'No Subject',
+    text: mailTemplate.text || '',
+    html: mailTemplate.html || ''
   };
 
   try {
@@ -64,9 +64,9 @@ const worker = new Worker('emailQueue', async job => {
 }, { 
   connection,
   // Concurrency defines how many jobs this worker processes at the exact same time
-  concurrency: 2, 
+  concurrency: 5, 
   limiter: {
-    max: 2,  //max 2 emails in 10 sec as per google 
+    max: 5,  //max 2 emails in 10 sec as per google 
     duration: 10000 
   }
 });

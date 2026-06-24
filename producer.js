@@ -4,7 +4,14 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const IORedis = require('ioredis');
 
-async function loadEmailsAndEnqueue(csvFilePath, redisOptions) {
+async function loadEmailsAndEnqueue(options = {}) {
+  const { 
+    mode = 'production', 
+    testEmail = null, 
+    csvFilePath, 
+    redisOptions 
+  } = options;
+
   // Connect to Redis
   const connection = new IORedis(redisOptions || {
     host: process.env.REDIS_HOST || '127.0.0.1',
@@ -14,6 +21,28 @@ async function loadEmailsAndEnqueue(csvFilePath, redisOptions) {
 
   // Initialize Queue
   const emailQueue = new Queue('emailQueue', { connection });
+
+  if (mode === 'test') {
+    if (!testEmail) {
+      await connection.quit();
+      throw new Error('testEmail is required when mode is "test"');
+    }
+    
+    console.log(`[TEST MODE] Adding single job for ${testEmail}...`);
+    await emailQueue.add('sendEmail', { to: testEmail }, {
+      removeOnComplete: { age: 24 * 3600, count: 5000 },
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 }
+    });
+    console.log('Test job added to the queue.');
+    await connection.quit();
+    return;
+  }
+
+  if (!csvFilePath) {
+    await connection.quit();
+    throw new Error('csvFilePath is required when mode is "production"');
+  }
 
   const emails = [];
 
@@ -56,8 +85,9 @@ async function loadEmailsAndEnqueue(csvFilePath, redisOptions) {
         await connection.quit();
         resolve();
       })
-      .on('error', (error) => {
+      .on('error', async (error) => {
         console.error('Error reading CSV:', error);
+        await connection.quit();
         reject(error);
       });
   });
@@ -66,7 +96,7 @@ async function loadEmailsAndEnqueue(csvFilePath, redisOptions) {
 // If run directly via `node producer.js`
 if (require.main === module) {
   // csv path to run the producer 
-  loadEmailsAndEnqueue('emails.csv').catch(console.error);
+  loadEmailsAndEnqueue({ csvFilePath: 'emails.csv' }).catch(console.error);
 }
 
 module.exports = { loadEmailsAndEnqueue };

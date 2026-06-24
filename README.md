@@ -8,70 +8,33 @@ A robust and scalable bulk email sender built on top of [BullMQ](https://docs.bu
 - **Round-Robin SMTP**: Uses multiple SMTP credentials to avoid hitting rate limits on a single account.
 - **CSV Support**: Easily read recipients from a `.csv` file.
 - **Admin Dashboard**: Visual dashboard to monitor active, completed, failed, and delayed jobs.
-- **Reusable as a Package**: Can be run as a standalone app or imported into your own Node.js projects.
+- **Reusable as a Package**: Dynamic template support so you can inject your own HTML and text per campaign.
 
 ## Prerequisites
 
 - **Node.js** (v14 or higher recommended)
-- **Redis Server** (You can use the provided `docker-compose.yml` to spin one up)
+- **Redis Server**: BullMQ **requires** a Redis server to manage the email queues. If you don't have a paid cloud Redis server, the easiest and completely free way to run it locally is using Docker.
 
-## 🚀 Standalone Usage
+### Setting up a Free Local Redis Server (via Docker)
+To prevent the package from crashing, you must have Redis running before sending emails. 
 
-### 1. Clone & Install
-```bash
-git clone <your-repo-url>
-cd BullMQ
-npm install
-```
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Create a `docker-compose.yml` file in your project root with the following content:
+   ```yaml
+   version: '3.8'
+   services:
+     redis:
+       image: redis:alpine
+       ports:
+         - "6379:6379"
+   ```
+3. Open your terminal in that directory and start Redis in the background:
+   ```bash
+   docker-compose up -d
+   ```
+This will instantly spin up a local Redis server on `127.0.0.1:6379` that the package will automatically connect to!
 
-### 2. Configure Environment
-Rename `.env.example` to `.env` and fill in your details:
-```env
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-
-SMTP_USER_1=your_first_email@gmail.com
-SMTP_PASS_1=your_first_app_password
-SMTP_USER_2=your_second_email@gmail.com
-SMTP_PASS_2=your_second_app_password
-
-PORT=3000
-```
-
-### 3. Start Redis
-If you have Docker installed, you can start a local Redis instance easily:
-```bash
-docker-compose up -d
-```
-
-### 4. Run the Services
-You need to run the Worker (to process jobs), the Dashboard (to view queues), and the Producer (to add jobs).
-
-Open three separate terminals and run:
-
-**Terminal 1: Start the Dashboard**
-```bash
-node dashboard.js
-# UI will be available at http://localhost:3000/admin/queues
-```
-
-**Terminal 2: Run the Producer**
-```bash
-# Make sure you have your emails in emails.csv (with an 'email' column header)
-node producer.js
-```
-
-**Terminal 3: Start the Worker**
-```bash
-node worker.js
-# Worker will wait for jobs in the background
-```
-
-
-```
-
-
-## 📦 Using as a Package (GitHub Packages)
+## 📦 Using as a Package
 
 This package is published to GitHub Packages under the `@ash469` scope.
 
@@ -88,31 +51,57 @@ To install this package, you must authenticate with GitHub Packages. Add an `.np
 npm install @ash469/bulk-email-bullmq-runner
 ```
 
-### Usage Example
-You can import the core functions into any of your existing Node applications:
+### Usage Example (How to pass your HTML)
+
+You can import the `BulkEmailRunner` class and inject your own HTML content dynamically! The runner supports a `test` mode to send a quick preview to a single email, and a `production` mode to blast the emails out from your CSV.
 
 ```javascript
-const { loadEmailsAndEnqueue, startWorker, startDashboard } = require('@ash469/bulk-email-bullmq-runner');
+const { BulkEmailRunner, startDashboard } = require('@ash469/bulk-email-bullmq-runner');
 
-// 1. Start the Dashboard UI on a custom port
-startDashboard(
-  { host: '127.0.0.1', port: 6379 }, // Redis Options
-  4000 // Port for the dashboard
-);
-
-// 2. Start the Worker with custom SMTP credentials
-startWorker(
-  { host: '127.0.0.1', port: 6379 }, // Redis Options
-  [
+// 1. Initialize the runner
+// Note: If you leave config empty, it falls back to your .env process variables
+const runner = new BulkEmailRunner({
+  redis: { host: '127.0.0.1', port: 6379 },
+  smtp: [
     { user: 'sender1@gmail.com', pass: 'pass1' },
     { user: 'sender2@gmail.com', pass: 'pass2' }
   ]
-);
+});
 
-// 3. Enqueue Emails from a CSV file
-loadEmailsAndEnqueue('path/to/your/list.csv', { host: '127.0.0.1', port: 6379 })
-  .then(() => console.log('All emails queued up!'))
-  .catch(console.error);
+// 2. Define your custom HTML template
+const myCustomHtml = `
+  <h1>Hello from the Package!</h1>
+  <p>This is where you put your own custom HTML.</p>
+`;
+
+// 3. Send a single TEST email
+runner.send({
+  mode: 'test',
+  testEmail: 'your-personal-test-email@example.com',
+  mailTemplate: {
+    fromName: 'My Awesome Company',
+    subject: 'This is a test preview',
+    html: myCustomHtml,
+    text: 'Fallback plain text version'
+  }
+}).then(() => console.log('Test email queued!'));
+
+/* 
+// 4. Or send in PRODUCTION mode using a CSV file
+runner.send({
+  mode: 'production',
+  csvPath: './my-subscribers.csv',
+  mailTemplate: {
+    fromName: 'My Awesome Company',
+    subject: 'Our Latest Newsletter!',
+    html: myCustomHtml,
+    text: 'Fallback plain text version'
+  }
+}).then(() => console.log('Bulk emails queued!'));
+*/
+
+// Optional: Start the Dashboard UI on port 3000
+startDashboard({ host: '127.0.0.1', port: 6379 }, 3000);
 ```
 
 ## Contributing
