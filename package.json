@@ -1,6 +1,6 @@
 {
   "name": "@ash469/bulk-email-bullmq-runner",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A bulk email sender using BullMQ, Redis, and Nodemailer with round-robin SMTP.",
   "main": "index.js",
   "repository": "https://github.com/Ash469/bullMQ-email",
